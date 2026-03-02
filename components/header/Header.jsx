@@ -11,7 +11,7 @@ const Header = () => {
 
   return (
     <div className="w-full bg-white border-b border-b-green-500 h-16 flex justify-between items-center">
-      <span className="text-xl font-bold text-gray-800 ml-4">Task Manager</span>
+      <span className="text-xl font-bold text-green-600 ml-4">TaskMint</span>
       <button
         onClick={handleLogout}
         className="mr-4 px-4 py-2 h-fit bg-red-500 text-white rounded hover:bg-red-600 transition"

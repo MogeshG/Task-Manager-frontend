@@ -8,6 +8,7 @@ const LoginPage = React.lazy(() => import("../pages/public/Login"));
 const RegisterPage = React.lazy(() => import("../pages/public/Register"));
 const DashboardPage = React.lazy(() => import("../pages/private/Dashboard"));
 const TaskPage = React.lazy(() => import("../pages/private/Tasks"));
+const CreateTaskPage = React.lazy(() => import("../pages/private/tasks/CreateTask"));
 const ProjectsPage = React.lazy(() => import("../pages/private/Projects"));
 const SettingsPage = React.lazy(() => import("../pages/private/Settings"));
 
@@ -30,6 +31,10 @@ const privateRoutes = [
   {
     route: "/tasks",
     component: <TaskPage />,
+  },
+  {
+    route: "/tasks/create-task",
+    component: <CreateTaskPage />,
   },
   {
     route: "/projects",

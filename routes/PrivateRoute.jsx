@@ -8,13 +8,15 @@ const PrivateRoute = () => {
   const token = localStorage.getItem("access_token");
 
   return isTokenValid(token) ? (
-    <div className="w-screen h-screen flex flex-col">
+    <div className="w-screen h-screen overflow-hidden flex flex-col">
       <Header />
       <div className="w-full h-full flex">
         <Sidebar />
-        <div className="w-full h-full overflow-y-auto p-4 bg-gray-100 flex flex-col">
+        <div className="w-full flex-1 overflow-hidden p-4 bg-gray-100 flex flex-col gap-4">
           <BreadCrumbs />
-          <Outlet />
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <Outlet />
+          </div>
         </div>
       </div>
     </div>
