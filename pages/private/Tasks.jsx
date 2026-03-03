@@ -1,10 +1,34 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { DndContext, closestCorners, useDroppable, DragOverlay } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
+import {
+  DndContext,
+  closestCorners,
+  useDroppable,
+  DragOverlay,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Input, Button, Space, Dropdown, DatePicker, Select, Badge } from "antd";
-import { SearchOutlined, FilterOutlined, PlusOutlined } from "@ant-design/icons";
+import {
+  Input,
+  Button,
+  Space,
+  Dropdown,
+  DatePicker,
+  Select,
+  Badge,
+  Modal,
+  Form,
+  message,
+} from "antd";
+import {
+  SearchOutlined,
+  FilterOutlined,
+  PlusOutlined,
+} from "@ant-design/icons";
 import dayjs from "dayjs";
 import axiosConfig from "../../configs/AxiosConfig";
 
@@ -41,96 +65,86 @@ const priorityStyles = {
   },
 };
 
-const TaskCard = ({ task }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: task._id,
-  });
+const TaskCard = ({ task, refreshTasks }) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [form] = Form.useForm();
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
+  const openModal = () => {
+    form.setFieldsValue({
+      title: task.title,
+      description: task.description,
+      priority: task.priority,
+      dueDate: task.dueDate ? dayjs(task.dueDate) : null,
+    });
+    setIsModalOpen(true);
   };
 
-  const dueDate = task.dueDate ? new Date(task.dueDate) : null;
-  const isOverdue = dueDate && dueDate < new Date();
+  const handleUpdate = async () => {
+    try {
+      const values = await form.validateFields();
 
-  const formattedDate = dueDate
-    ? dueDate.toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
-    : null;
+      await axiosConfig.put(`/api/tasks/${task._id}`, {
+        ...values,
+        dueDate: values.dueDate ? values.dueDate.toISOString() : null,
+      });
 
-  const priorityKey = task.priority?.toLowerCase() || "low";
-  const pStyle = priorityStyles[priorityKey];
+      message.success("Task updated successfully");
+      setIsModalOpen(false);
+      refreshTasks();
+    } catch (err) {
+      message.error("Failed to update task");
+    }
+  };
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      className={`group relative mb-3 rounded-xl overflow-hidden border bg-white
-        transition-all duration-200 ease-out
-        cursor-grab active:cursor-grabbing
-        ${
-          isDragging
-            ? "opacity-50 scale-[0.97] shadow-lg"
-            : "hover:shadow-lg hover:-translate-y-0.5"
-        }`}
-    >
-      <div className={`absolute left-0 top-0 h-full w-2 rounded-l-2xl ${pStyle.rail}`} />
-
-      <div className="p-4 pl-4">
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <h3 className="font-semibold text-[13px] leading-snug text-gray-800 line-clamp-2">
-            {task.title}
-          </h3>
-
-          {task.priority && (
-            <span
-              className={`text-[10px] px-2.5 py-1 rounded-md font-semibold whitespace-nowrap
-                ${pStyle.badge}`}
-            >
-              {task.priority}
-            </span>
-          )}
-        </div>
-
-        {task.description && (
-          <p className="text-xs text-gray-500 line-clamp-2 mb-3 leading-relaxed">
-            {task.description}
-          </p>
-        )}
-
-        <div className="flex items-center justify-between pt-1">
-          {formattedDate ? (
-            <div
-              className={`flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-lg
-                ${
-                  isOverdue
-                    ? "bg-red-50 text-red-600 ring-1 ring-red-200"
-                    : "bg-gray-100 text-gray-600"
-                }`}
-            >
-              {isOverdue && <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />}
-              <span>📅 {formattedDate}</span>
-            </div>
-          ) : (
-            <span />
-          )}
-
-          <div className="opacity-0 group-hover:opacity-100 transition">
-            <div className="text-gray-300 text-sm">⋮⋮</div>
-          </div>
-        </div>
+    <>
+      <div
+        onClick={openModal}
+        className="cursor-pointer mb-3 rounded-xl border bg-white p-4 hover:shadow-lg"
+      >
+        <h3 className="font-semibold text-sm">{task.title}</h3>
+        <p className="text-xs text-gray-500">{task.description}</p>
       </div>
-    </div>
+
+      <Modal
+        title="Update Task"
+        open={isModalOpen}
+        onOk={handleUpdate}
+        onCancel={() => setIsModalOpen(false)}
+        okText="Update"
+        destroyOnClose
+      >
+        <Form layout="vertical" form={form}>
+          <Form.Item
+            label="Title"
+            name="title"
+            rules={[{ required: true, message: "Title is required" }]}
+          >
+            <Input />
+          </Form.Item>
+
+          <Form.Item label="Description" name="description">
+            <Input.TextArea rows={3} />
+          </Form.Item>
+
+          <Form.Item label="Priority" name="priority">
+            <Select>
+              <Option value="Low">Low</Option>
+              <Option value="Medium">Medium</Option>
+              <Option value="High">High</Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item label="Due Date" name="dueDate">
+            <DatePicker style={{ width: "100%" }} />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </>
   );
 };
 
-const Column = ({ id, title, tasks }) => {
+const Column = ({ id, title, tasks, fetchTasks }) => {
   const { setNodeRef, isOver } = useDroppable({ id });
   const colors = columnStyles[id];
 
@@ -143,11 +157,16 @@ const Column = ({ id, title, tasks }) => {
         flex flex-col min-h-120 md:min-h-80`}
     >
       {/* header */}
-      <div className={`px-3 py-2 rounded-lg mb-3 text-sm font-semibold ${colors.header}`}>
+      <div
+        className={`px-3 py-2 rounded-lg mb-3 text-sm font-semibold ${colors.header}`}
+      >
         {title} ({tasks.length})
       </div>
 
-      <SortableContext items={tasks.map((t) => t._id)} strategy={verticalListSortingStrategy}>
+      <SortableContext
+        items={tasks.map((t) => t._id)}
+        strategy={verticalListSortingStrategy}
+      >
         <div className="flex-1 overflow-y-auto min-h-0 pt-2 hover-scroll">
           {tasks.length === 0 && (
             <div className="text-xs text-gray-400 text-center py-6 border-2 border-dashed rounded-lg">
@@ -156,7 +175,7 @@ const Column = ({ id, title, tasks }) => {
           )}
 
           {tasks.map((task) => (
-            <TaskCard key={task._id} task={task} />
+            <TaskCard key={task._id} task={task} refreshTasks={fetchTasks} />
           ))}
         </div>
       </SortableContext>
@@ -211,7 +230,8 @@ const Tasks = () => {
 
       const matchesDate =
         selectedDate === "" ||
-        (task.dueDate && dayjs(task.dueDate).format("YYYY-MM-DD") === selectedDate);
+        (task.dueDate &&
+          dayjs(task.dueDate).format("YYYY-MM-DD") === selectedDate);
 
       return matchesSearch && matchesPriority && matchesDate;
     });
@@ -227,7 +247,9 @@ const Tasks = () => {
         .filter((t) => t.status === "inProgress")
         .sort((a, b) => a.order - b.order),
 
-      done: filteredTasks.filter((t) => t.status === "done").sort((a, b) => a.order - b.order),
+      done: filteredTasks
+        .filter((t) => t.status === "done")
+        .sort((a, b) => a.order - b.order),
     }),
     [filteredTasks],
   );
@@ -261,7 +283,8 @@ const Tasks = () => {
 
     const sourceTasks = columns[fromColumn].filter((t) => t._id !== active.id);
 
-    let destinationTasks = fromColumn === toColumn ? sourceTasks : [...columns[toColumn]];
+    let destinationTasks =
+      fromColumn === toColumn ? sourceTasks : [...columns[toColumn]];
 
     let newIndex;
     const overTask = tasks.find((t) => t._id === over.id);
@@ -303,7 +326,9 @@ const Tasks = () => {
 
     try {
       const affected =
-        fromColumn === toColumn ? updatedDestination : [...updatedSource, ...updatedDestination];
+        fromColumn === toColumn
+          ? updatedDestination
+          : [...updatedSource, ...updatedDestination];
 
       const displayStatusMap = {
         notStarted: "Not Started",
@@ -328,7 +353,9 @@ const Tasks = () => {
   return (
     <div className="bg-white w-full rounded-xl p-3 md:p-5 flex-1 h-full flex flex-col overflow-hidden">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg md:text-xl font-bold whitespace-nowrap">Kanban Board</h2>
+        <h2 className="text-lg md:text-xl font-bold whitespace-nowrap">
+          Kanban Board
+        </h2>
 
         <div className="flex flex-row gap-2">
           <Input
@@ -337,7 +364,6 @@ const Tasks = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             allowClear
-            size="small"
             className="!py-0"
             style={{ width: 250 }}
           />
@@ -354,21 +380,25 @@ const Tasks = () => {
                   boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
                 }}
               >
-                <Space direction="vertical" size="small" style={{ width: "100%" }}>
+                <Space
+                  direction="vertical"
+                  size="small"
+                  style={{ width: "100%" }}
+                >
                   <div>
                     <div className="text-xs font-semibold mb-1">Due Date</div>
                     <DatePicker
-                      size="small"
                       style={{ width: "100%" }}
                       value={selectedDate ? dayjs(selectedDate) : null}
-                      onChange={(date) => setSelectedDate(date ? date.format("YYYY-MM-DD") : "")}
+                      onChange={(date) =>
+                        setSelectedDate(date ? date.format("YYYY-MM-DD") : "")
+                      }
                     />
                   </div>
 
                   <div>
                     <div className="text-xs font-semibold mb-1">Priority</div>
                     <Select
-                      size="small"
                       style={{ width: "100%" }}
                       value={selectedPriority || undefined}
                       onChange={(value) => setSelectedPriority(value || "")}
@@ -385,7 +415,6 @@ const Tasks = () => {
                   <Button
                     type="link"
                     danger
-                    size="small"
                     block
                     style={{ padding: 0 }} // ⬅ removes extra vertical space
                     onClick={() => {
@@ -400,15 +429,12 @@ const Tasks = () => {
             )}
           >
             <Badge dot={selectedDate || selectedPriority}>
-              <Button size="small" icon={<FilterOutlined />}>
-                Filters
-              </Button>
+              <Button icon={<FilterOutlined />}>Filters</Button>
             </Badge>
           </Dropdown>
 
           <Button
             type="primary"
-            size="small"
             icon={<PlusOutlined />}
             onClick={() => navigate("/tasks/create-task")}
           >
@@ -423,13 +449,30 @@ const Tasks = () => {
       >
         <div className="flex-1 min-h-0 overflow-hidden">
           <div className="flex flex-col md:grid md:grid-cols-3 gap-3 md:gap-5 h-full min-h-0 overflow-y-auto md:overflow-hidden px-1 md:px-0 scrollbar-hide">
-            <Column id="notStarted" title="Not Started" tasks={columns.notStarted} />
-            <Column id="inProgress" title="In Progress" tasks={columns.inProgress} />
-            <Column id="done" title="Done" tasks={columns.done} />
+            <Column
+              id="notStarted"
+              title="Not Started"
+              tasks={columns.notStarted}
+              fetchTasks={fetchTasks}
+            />
+            <Column
+              id="inProgress"
+              title="In Progress"
+              tasks={columns.inProgress}
+              fetchTasks={fetchTasks}
+            />
+            <Column
+              id="done"
+              title="Done"
+              tasks={columns.done}
+              fetchTasks={fetchTasks}
+            />
           </div>
         </div>
 
-        <DragOverlay>{activeTask ? <TaskCard task={activeTask} /> : null}</DragOverlay>
+        <DragOverlay>
+          {activeTask ? <TaskCard task={activeTask} /> : null}
+        </DragOverlay>
       </DndContext>
     </div>
   );
