@@ -1,7 +1,7 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-const Sidebar = () => {
+const Sidebar = ({ onClose }) => {
   const navigate = useNavigate();
   const currentRoute = useLocation();
 
@@ -9,10 +9,6 @@ const Sidebar = () => {
     {
       name: "Dashboard",
       path: "/dashboard",
-    },
-    {
-      name: "Projects",
-      path: "/projects",
     },
     {
       name: "Tasks",
@@ -23,13 +19,33 @@ const Sidebar = () => {
       path: "/settings",
     },
   ];
+
+  const handleNavigation = (path) => {
+    navigate(path);
+    onClose && onClose();
+  };
+
   return (
-    <div className="w-60 h-full shadow-md flex flex-col p-4">
+    <div className="w-60 h-full shadow-md flex flex-col p-4 bg-white">
+      {/* Close button for mobile */}
+      <button
+        onClick={onClose}
+        className="md:hidden self-end mb-4 text-2xl text-gray-600 hover:text-gray-900"
+        aria-label="Close sidebar"
+      >
+        ✕
+      </button>
+
       <ul className="flex flex-col gap-2">
         {routes.map((route) => (
           <li
-            onClick={() => navigate(route.path)}
-            className={`w-full p-2 rounded-md cursor-pointer ${currentRoute.pathname.includes(route.path) ? "bg-green-200 border-r-6 border-r-green-500" : ""} `}
+            key={route.path}
+            onClick={() => handleNavigation(route.path)}
+            className={`w-full p-3 rounded-md cursor-pointer transition-colors ${
+              currentRoute.pathname.includes(route.path)
+                ? "bg-green-200 border-r-4 border-r-green-500 text-green-700 font-semibold"
+                : "hover:bg-gray-100 text-gray-700"
+            } `}
           >
             {route.name}
           </li>

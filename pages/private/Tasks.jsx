@@ -1,13 +1,11 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { DndContext, closestCorners, useDroppable, DragOverlay } from "@dnd-kit/core";
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-  useSortable,
-  arrayMove,
-} from "@dnd-kit/sortable";
+import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Input, Button, Space, Dropdown, DatePicker, Select, Badge } from "antd";
+import { SearchOutlined, FilterOutlined, PlusOutlined } from "@ant-design/icons";
+import dayjs from "dayjs";
 import axiosConfig from "../../configs/AxiosConfig";
 
 const columnStyles = {
@@ -139,9 +137,10 @@ const Column = ({ id, title, tasks }) => {
   return (
     <div
       ref={setNodeRef}
-      className={`rounded-2xl border ${colors.border} p-3 transition-all
+      className={`rounded-2xl border ${colors.border}
+        p-3 transition-all
         ${isOver ? colors.glow : "bg-gray-50"}
-        h-full flex flex-col min-h-0`}
+        flex flex-col min-h-120 md:min-h-80`}
     >
       {/* header */}
       <div className={`px-3 py-2 rounded-lg mb-3 text-sm font-semibold ${colors.header}`}>
@@ -149,7 +148,7 @@ const Column = ({ id, title, tasks }) => {
       </div>
 
       <SortableContext items={tasks.map((t) => t._id)} strategy={verticalListSortingStrategy}>
-        <div className="flex-1 overflow-y-auto min-h-0 pt-2">
+        <div className="flex-1 overflow-y-auto min-h-0 pt-2 hover-scroll">
           {tasks.length === 0 && (
             <div className="text-xs text-gray-400 text-center py-6 border-2 border-dashed rounded-lg">
               Drop tasks here
@@ -169,6 +168,9 @@ const Tasks = () => {
   const navigate = useNavigate();
   const [tasks, setTasks] = useState([]);
   const [activeTask, setActiveTask] = useState(null);
+  const [search, setSearch] = useState("");
+  const [selectedPriority, setSelectedPriority] = useState("");
+  const [selectedDate, setSelectedDate] = useState("");
 
   const fetchTasks = async () => {
     try {
@@ -198,13 +200,36 @@ const Tasks = () => {
     fetchTasks();
   }, []);
 
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((task) => {
+      const matchesSearch =
+        task.title?.toLowerCase().includes(search.toLowerCase()) ||
+        task.description?.toLowerCase().includes(search.toLowerCase());
+
+      const matchesPriority =
+        !selectedPriority || task.priority?.toLowerCase() === selectedPriority;
+
+      const matchesDate =
+        selectedDate === "" ||
+        (task.dueDate && dayjs(task.dueDate).format("YYYY-MM-DD") === selectedDate);
+
+      return matchesSearch && matchesPriority && matchesDate;
+    });
+  }, [tasks, search, selectedPriority, selectedDate]);
+
   const columns = useMemo(
     () => ({
-      notStarted: tasks.filter((t) => t.status === "notStarted"),
-      inProgress: tasks.filter((t) => t.status === "inProgress"),
-      done: tasks.filter((t) => t.status === "done"),
+      notStarted: filteredTasks
+        .filter((t) => t.status === "notStarted")
+        .sort((a, b) => a.order - b.order),
+
+      inProgress: filteredTasks
+        .filter((t) => t.status === "inProgress")
+        .sort((a, b) => a.order - b.order),
+
+      done: filteredTasks.filter((t) => t.status === "done").sort((a, b) => a.order - b.order),
     }),
-    [tasks],
+    [filteredTasks],
   );
 
   const findColumn = (id) => {
@@ -217,7 +242,7 @@ const Tasks = () => {
     setActiveTask(task || null);
   };
 
-  const handleDragEnd = ({ active, over }) => {
+  const handleDragEnd = async ({ active, over }) => {
     if (!over) {
       setActiveTask(null);
       return;
@@ -231,52 +256,176 @@ const Tasks = () => {
       return;
     }
 
-    if (fromColumn === toColumn) {
-      const columnTasks = columns[fromColumn];
+    const activeTask = tasks.find((t) => t._id === active.id);
+    if (!activeTask) return;
 
-      const oldIndex = columnTasks.findIndex((t) => t._id === active.id);
-      const newIndex = columnTasks.findIndex((t) => t._id === over.id);
+    const sourceTasks = columns[fromColumn].filter((t) => t._id !== active.id);
 
-      if (oldIndex !== -1 && newIndex !== -1) {
-        const reordered = arrayMove(columnTasks, oldIndex, newIndex);
+    let destinationTasks = fromColumn === toColumn ? sourceTasks : [...columns[toColumn]];
 
-        setTasks((prev) => {
-          const others = prev.filter((t) => t.status !== fromColumn);
-          return [...others, ...reordered];
-        });
-      }
+    let newIndex;
+    const overTask = tasks.find((t) => t._id === over.id);
+
+    if (overTask) {
+      newIndex = destinationTasks.findIndex((t) => t._id === over.id);
     } else {
-      setTasks((prev) => prev.map((t) => (t._id === active.id ? { ...t, status: toColumn } : t)));
+      newIndex = destinationTasks.length;
+    }
+
+    const movedTask = {
+      ...activeTask,
+      status: toColumn,
+    };
+
+    destinationTasks.splice(newIndex, 0, movedTask);
+
+    const updatedDestination = destinationTasks.map((task, index) => ({
+      ...task,
+      order: index,
+    }));
+
+    const updatedSource =
+      fromColumn === toColumn
+        ? []
+        : sourceTasks.map((task, index) => ({
+            ...task,
+            order: index,
+          }));
+
+    const updatedTasks = [
+      ...tasks.filter((t) => t.status !== fromColumn && t.status !== toColumn),
+      ...updatedSource,
+      ...updatedDestination,
+    ];
+
+    // Optimistic UI (still using short keys for board logic)
+    setTasks(updatedTasks);
+
+    try {
+      const affected =
+        fromColumn === toColumn ? updatedDestination : [...updatedSource, ...updatedDestination];
+
+      const displayStatusMap = {
+        notStarted: "Not Started",
+        inProgress: "In Progress",
+        done: "Done",
+      };
+
+      await axiosConfig.patch("/api/tasks/reorder", {
+        tasks: affected.map((task) => ({
+          _id: task._id,
+          status: displayStatusMap[task.status] || task.status,
+          order: task.order,
+        })),
+      });
+    } catch (error) {
+      console.error("Reorder failed", error);
     }
 
     setActiveTask(null);
   };
 
   return (
-    <div className="bg-white w-full rounded-xl p-5 flex flex-col overflow-hidden min-h-0">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold">Kanban Board</h2>
+    <div className="bg-white w-full rounded-xl p-3 md:p-5 flex-1 h-full flex flex-col overflow-hidden">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg md:text-xl font-bold whitespace-nowrap">Kanban Board</h2>
 
-        <button
-          onClick={() => navigate("/tasks/create-task")}
-          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl transition"
-        >
-          + Create Task
-        </button>
+        <div className="flex flex-row gap-2">
+          <Input
+            placeholder="Search..."
+            prefix={<SearchOutlined />}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            allowClear
+            size="small"
+            className="!py-0"
+            style={{ width: 250 }}
+          />
+
+          <Dropdown
+            trigger={["click"]}
+            dropdownRender={() => (
+              <div
+                style={{
+                  background: "#fff",
+                  padding: 12, // ⬅ reduce from 14
+                  borderRadius: 10, // slightly tighter
+                  width: 220, // smaller dropdown
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                }}
+              >
+                <Space direction="vertical" size="small" style={{ width: "100%" }}>
+                  <div>
+                    <div className="text-xs font-semibold mb-1">Due Date</div>
+                    <DatePicker
+                      size="small"
+                      style={{ width: "100%" }}
+                      value={selectedDate ? dayjs(selectedDate) : null}
+                      onChange={(date) => setSelectedDate(date ? date.format("YYYY-MM-DD") : "")}
+                    />
+                  </div>
+
+                  <div>
+                    <div className="text-xs font-semibold mb-1">Priority</div>
+                    <Select
+                      size="small"
+                      style={{ width: "100%" }}
+                      value={selectedPriority || undefined}
+                      onChange={(value) => setSelectedPriority(value || "")}
+                      allowClear
+                      placeholder="Select"
+                      options={[
+                        { value: "low", label: "Low" },
+                        { value: "medium", label: "Medium" },
+                        { value: "high", label: "High" },
+                      ]}
+                    />
+                  </div>
+
+                  <Button
+                    type="link"
+                    danger
+                    size="small"
+                    block
+                    style={{ padding: 0 }} // ⬅ removes extra vertical space
+                    onClick={() => {
+                      setSelectedDate("");
+                      setSelectedPriority("");
+                    }}
+                  >
+                    Clear
+                  </Button>
+                </Space>
+              </div>
+            )}
+          >
+            <Badge dot={selectedDate || selectedPriority}>
+              <Button size="small" icon={<FilterOutlined />}>
+                Filters
+              </Button>
+            </Badge>
+          </Dropdown>
+
+          <Button
+            type="primary"
+            size="small"
+            icon={<PlusOutlined />}
+            onClick={() => navigate("/tasks/create-task")}
+          >
+            Create
+          </Button>
+        </div>
       </div>
-
       <DndContext
         onDragStart={handleDragStart}
         collisionDetection={closestCorners}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex-1 min-h-0 h-full overflow-hidden w-full">
-          <div className="flex-1 min-h-0">
-            <div className="grid md:grid-cols-3 gap-5 h-full">
-              <Column id="notStarted" title="Not Started" tasks={columns.notStarted} />
-              <Column id="inProgress" title="In Progress" tasks={columns.inProgress} />
-              <Column id="done" title="Done" tasks={columns.done} />
-            </div>
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <div className="flex flex-col md:grid md:grid-cols-3 gap-3 md:gap-5 h-full min-h-0 overflow-y-auto md:overflow-hidden px-1 md:px-0 scrollbar-hide">
+            <Column id="notStarted" title="Not Started" tasks={columns.notStarted} />
+            <Column id="inProgress" title="In Progress" tasks={columns.inProgress} />
+            <Column id="done" title="Done" tasks={columns.done} />
           </div>
         </div>
 

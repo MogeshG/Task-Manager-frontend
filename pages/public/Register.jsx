@@ -46,12 +46,16 @@ const Register = () => {
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-gray-100 p-4">
-      <p className="text-3xl font-bold mb-4 text-green-700">TASKMINT</p>
+      <p className="text-2xl md:text-3xl font-bold mb-4 md:mb-6 text-green-700">TASKMINT</p>
 
-      <div className="w-full max-w-5xl grid md:grid-cols-2 bg-white rounded-2xl overflow-hidden shadow-xl">
-        <div className="flex items-center justify-center p-6 md:p-10">
+      <div className="w-full max-w-5xl grid md:grid-cols-2 bg-white rounded-xl md:rounded-2xl overflow-hidden shadow-lg md:shadow-xl">
+        <div className="hidden md:flex flex-col justify-center items-center bg-linear-to-br from-green-700 to-emerald-500 text-white p-8 md:p-10">
+          <h1 className="text-3xl md:text-4xl font-bold mb-4">Get Started 🚀</h1>
+        </div>
+
+        <div className="flex items-center justify-center p-4 md:p-10">
           <Card className="w-full max-w-sm border-none shadow-none">
-            <h2 className="text-2xl font-semibold mb-6 text-center">Create Account</h2>
+            <h2 className="text-xl md:text-2xl font-semibold mb-6 text-center">Create Account</h2>
 
             <Form form={form} layout="vertical" onFinish={onRegister}>
               <Form.Item
