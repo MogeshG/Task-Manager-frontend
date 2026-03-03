@@ -34,7 +34,12 @@ const Dashboard = () => {
     }
   };
 
-  if (loading) return <Spin size="large" />;
+  if (loading)
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Spin size="large" />;
+      </div>
+    );
 
   const pieData = [
     { name: "Not Started", value: analytics.statusDistribution.notStarted },
