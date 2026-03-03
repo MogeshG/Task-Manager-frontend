@@ -17,10 +17,7 @@ const Register = () => {
     };
 
     try {
-      const result = await axiosConfig.post(
-        "/api/auth/register",
-        formattedValues,
-      );
+      const result = await axiosConfig.post("/api/auth/register", formattedValues);
 
       if (result.status === 201) {
         message.success({
@@ -40,9 +37,7 @@ const Register = () => {
     } catch (error) {
       console.log("Registration error:", error);
       message.error({
-        content:
-          error?.response?.data?.message ||
-          "Registration failed. Please try again.",
+        content: error?.response?.data?.message || "Registration failed. Please try again.",
       });
     } finally {
       setLoading(false);
@@ -55,9 +50,7 @@ const Register = () => {
         <div className="grid md:grid-cols-2">
           {/* LEFT SIDE */}
           <div className="hidden md:flex flex-col justify-center items-center bg-linear-to-br from-green-700 to-emerald-500 text-white p-10">
-            <h1 className="text-4xl font-bold mb-4 text-center">
-              Get Started 🚀
-            </h1>
+            <h1 className="text-4xl font-bold mb-4 text-center">Get Started 🚀</h1>
             <p className="text-center opacity-90">
               Join TASKMINT and manage your tasks efficiently.
             </p>
@@ -66,25 +59,16 @@ const Register = () => {
           {/* RIGHT SIDE */}
           <div className="flex items-center justify-center p-6 md:p-10">
             <div className="w-full max-w-md">
-              <p className="text-green-500 text-2xl text-center font-semibold">
-                TASKMINT
-              </p>
+              <p className="text-green-700 text-2xl text-center font-bold">TASKMINT</p>
               <h2 className="text-2xl font-semibold mb-2 text-center text-green-700">
                 Create Account
               </h2>
 
-              <Form
-                form={form}
-                layout="vertical"
-                onFinish={onRegister}
-                size="large"
-              >
+              <Form form={form} layout="vertical" onFinish={onRegister}>
                 <Form.Item
                   name="name"
                   label="Full Name"
-                  rules={[
-                    { required: true, message: "Please enter your name" },
-                  ]}
+                  rules={[{ required: true, message: "Please enter your name" }]}
                 >
                   <Input size="large" placeholder="Enter your name" />
                 </Form.Item>
@@ -125,9 +109,7 @@ const Register = () => {
                         if (!value || getFieldValue("password") === value) {
                           return Promise.resolve();
                         }
-                        return Promise.reject(
-                          new Error("Passwords do not match"),
-                        );
+                        return Promise.reject(new Error("Passwords do not match"));
                       },
                     }),
                   ]}
@@ -135,12 +117,7 @@ const Register = () => {
                   <Input.Password size="large" placeholder="Confirm password" />
                 </Form.Item>
 
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  loading={loading}
-                  className="w-full mt-2"
-                >
+                <Button type="primary" htmlType="submit" loading={loading} className="w-full mt-2">
                   Create Account
                 </Button>
 

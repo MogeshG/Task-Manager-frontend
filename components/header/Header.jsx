@@ -1,3 +1,4 @@
+import { Button } from "antd";
 import React from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -26,12 +27,9 @@ const Header = ({ onMenuClick }) => {
           TaskMint
         </span>
       </div>
-      <button
-        onClick={handleLogout}
-        className="px-3 md:px-4 py-2 h-fit bg-red-500 text-white text-sm md:text-base rounded hover:bg-red-600 transition whitespace-nowrap"
-      >
+      <Button type="primary" danger onClick={handleLogout}>
         Logout
-      </button>
+      </Button>
     </div>
   );
 };

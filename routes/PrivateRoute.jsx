@@ -18,7 +18,6 @@ const PrivateRoute = () => {
       <Header onMenuClick={toggleSidebar} />
 
       <div className="flex flex-1 min-h-0 relative">
-        {/* Mobile overlay */}
         {isSidebarOpen && (
           <div
             className="md:hidden absolute inset-0 bg-black/50 z-10"

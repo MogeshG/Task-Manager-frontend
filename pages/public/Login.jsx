@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Form, Input, Button, Card, message } from "antd";
+import { GoogleOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
@@ -17,7 +18,6 @@ const Login = () => {
         `${import.meta.env.VITE_API_BASE_URL}/api/auth/login`,
         values,
       );
-      console.log("Login Response:", result);
 
       if (result.status !== 200) {
         throw new Error("Login failed");
@@ -27,7 +27,6 @@ const Login = () => {
 
       message.success({ content: "Login successful!" });
 
-      // ✅ SPA navigation (no reload)
       navigate("/dashboard");
     } catch (error) {
       console.log(error);
@@ -80,7 +79,22 @@ const Login = () => {
               >
                 Login
               </Button>
+              <div className="my-6 flex items-center">
+                <div className="grow border-t border-gray-300" />
+                <span className="mx-3 text-gray-400 text-sm">or</span>
+                <div className="grow border-t border-gray-300" />
+              </div>
 
+              <Button
+                size="large"
+                icon={<GoogleOutlined />}
+                className="w-full"
+                onClick={() =>
+                  (window.location.href = `${import.meta.env.VITE_API_BASE_URL}/api/auth/google`)
+                }
+              >
+                Continue with Google
+              </Button>
               <p className="text-center mt-4 text-xs md:text-sm">
                 New here?{" "}
                 <button
